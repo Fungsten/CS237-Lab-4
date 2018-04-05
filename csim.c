@@ -1,10 +1,13 @@
+
 #include "cachelab.h"
 #include <stdio.h>
 
-int main()
+int main(int argc, char **argv)
 {
     FILE *fp;
     char str[60];
+    int c;
+    char *cvalue = NULL;
 
     //printSummary(0, 0 ,0);
 
@@ -18,5 +21,19 @@ int main()
     }
     fclose(fp);
 
+    /*
+    while ((c = getopt (argc, argv, "ac:")) != -1)
+      switch (c) {
+       case 'h':
+        // Optional help flag that prints usage info
+        break;
+       case 'c':
+        //meh
+        cvalue = optarg;
+        break;
+       default:
+        //another thing
+      }
+    */
     return 0;
 }

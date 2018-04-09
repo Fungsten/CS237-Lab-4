@@ -10,25 +10,35 @@
 #include <unistd.h>
 #include <getopt.h>
 
+
+struct Line {
+  int valid;
+  int tag;
+  int offset;
+  int dirty;
+  int LRU;
+};
+
 int main(int argc, char **argv)
 {
     FILE *fp;
     char str[60];
     int c;
+
     //char *cvalue = NULL;
 
     //printSummary(0, 0 ,0);
 
-    printf("Trying to open file.\n");
-    fp = fopen(argv[1], "r");
-    if (fp == NULL) {
-      perror("Error opening file");
-      return -1;
-    }
-    if (fgets(str, 60, fp) != NULL) {
-      puts(str);
-    }
-    fclose(fp);
+    // printf("Trying to open file.\n");
+    // fp = fopen(argv[1], "r");
+    // if (fp == NULL) {
+    //   perror("Error opening file");
+    //   return -1;
+    // }
+    // if (fgets(str, 60, fp) != NULL) {
+    //   puts(str);
+    // }
+    // fclose(fp);
 
 
 
@@ -54,13 +64,15 @@ int main(int argc, char **argv)
       case 't':
         // Name of the valgrind trace to replay
         printf("Trying to open file.\n");
-        fp = fopen(argv[1], "r");
+        printf("%s\n", argv[2]);
+        fp = fopen(argv[2], "r");
         if (fp == NULL) {
-         perror("Error opening file");
-         return -1;
+          perror("Error opening file");
+          return -1;
         }
-        if (fgets(str, 60, fp) != NULL) {
-         puts(str);
+        while (fgets(str, 60, fp) != NULL) {
+          puts(str);
+
         }
         fclose(fp);
 

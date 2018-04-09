@@ -1,6 +1,6 @@
 # CS237-Lab-4
 
-Williams College
+Williams College \n
 Spring 2018
 CS237 Computer Organization
 Jeannie Albrecht

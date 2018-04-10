@@ -11,47 +11,39 @@
 #include <getopt.h>
 #include <math.h>
 
-
-struct Lines {
+typedef struct Line { // Change from Lines to Line
   int valid; // isValid or notIsValid
   int tag; // specifies line
   int offset;
-  int offset_size; // which of the blocks does the desired data live in
+  int *blocks; // which of the blocks does the desired data live in
   int dirty; // 0 if unmodded, 1 if modded
   int LRU; // This is the clock, least recently used
-};
+} Line;
 
+typedef struct Set {
+  struct Line *lines;
+} Set;
 
+typedef struct Cache {
+  struct Set *sets;
+} Cache;
+
+void memory(int, int, int, Cache*);
 
 int main(int argc, char **argv)
 {
     FILE *fp;
     char str[60];
     int c;
-
-    //char *cvalue = NULL;
+    int s;
+    int E;
+    int b;
+    Cache thecache; // come up with better name later
 
     //printSummary(0, 0 ,0);
 
-    // printf("Trying to open file.\n");
-    // fp = fopen(argv[1], "r");
-    // if (fp == NULL) {
-    //   perror("Error opening file");
-    //   return -1;
-    // }
-    // if (fgets(str, 60, fp) != NULL) {
-    //   puts(str);
-    // }
-    // fclose(fp);
-
-
-
     while ((c = getopt (argc, argv, "hvs:E:b:t:")) != -1)
       switch (c) {
-        struct Lines *l = malloc(sizeof(*l));
-        l->dirty = 0;
-        l->LRU = 0;
-        l->offset_size = 2 << atoi(argv[6]);
         case 'h':
           // Optional help flag that prints usage info
           printf("Usage info\n");
@@ -60,30 +52,32 @@ int main(int argc, char **argv)
           // Optional verbose flag that displays trace info
           break;
         case 's':
-          printf("%s\n", argv[2]);
+          printf("%s\n", optarg); //optarg
           // Number of set index bits (S = 2^s is the number of sets)
+          s = pow(2, atoi(optarg));
           break;
         case 'E':
-          printf("%s\n", argv[4]);
+          printf("%s\n", optarg);
           // Associativity (number of lines per set)
+          E = atoi(optarg);
           break;
         case 'b':
-          printf("%s\n", argv[6]);
+          printf("%s\n", optarg);
           // Number of block bits (B = 2^b is the block size)
-          // l->offset_size = 2 << atoi(argv[6]);
+          b = pow(2, atoi(optarg));
           break;
         case 't':
           // Name of the valgrind trace to replay
           printf("Trying to open file.\n");
-          printf("%s\n", argv[8]);    //increment by two if -h and -v are implemented
-          fp = fopen(argv[8], "r");
+          printf("%s\n", optarg);    //increment by two if -h and -v are implemented
+          fp = fopen(optarg, "r");
           if (fp == NULL) {
             perror("Error opening file");
             return -1;
           }
           while (fgets(str, 60, fp) != NULL) {
             puts(str);
-
+            memory(s, E, b, &thecache);
           }
 
           fclose(fp);
@@ -93,9 +87,29 @@ int main(int argc, char **argv)
           //another thing
           printf("Hello world.\n");
           break;
-        //FREE the malloc, unleash the Kraken
-        free(l);
       }
 
+
 return 0;
+}
+
+// void parse() // maybe later
+
+void memory(int s, int E, int b, Cache *c){
+  //memory allocation for sets, lines per set, and bit blocks for line
+  Set *sets = malloc(s*sizeof(Set));//allocation for number of sets
+  for (int i = s; i > 0; i--){
+    Line *lines = malloc(E*sizeof(struct Line));
+    for (int j = E; j > 0; j--){
+      lines[j].blocks = malloc(b);
+    }
+    sets[i].lines = lines;
+  }
+  (*c).sets = sets;   // does the same as below
+  // x->sets = sets;  // does the same as above
+}
+
+// Free the malloc'd stuff
+void freeTheCache(Cache *c){
+
 }

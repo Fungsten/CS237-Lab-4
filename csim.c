@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <math.h>
+#include <string.h>
 
 typedef struct Line { // Change from Lines to Line
   int valid; // isValid or notIsValid
@@ -29,15 +30,14 @@ typedef struct Cache {
 } Cache;
 
 void memory(int, int, int, Cache*);
+void freeTheCache(int, int, int, Cache*);
+void parse(char*);
 
 int main(int argc, char **argv)
 {
     FILE *fp;
     char str[60];
-    int c;
-    int s;
-    int E;
-    int b;
+    int c, s, E, b;
     Cache thecache; // come up with better name later
 
     //printSummary(0, 0 ,0);
@@ -76,8 +76,9 @@ int main(int argc, char **argv)
             return -1;
           }
           while (fgets(str, 60, fp) != NULL) {
-            puts(str);
+            // puts(str);
             memory(s, E, b, &thecache);
+            parse(str);
           }
 
           fclose(fp);
@@ -90,19 +91,18 @@ int main(int argc, char **argv)
       }
 
 
+freeTheCache(s, E, b, &thecache);
 return 0;
 }
-
-// void parse() // maybe later
 
 void memory(int s, int E, int b, Cache *c){
   //memory allocation for sets, lines per set, and bit blocks for line
   Set *sets = malloc(s*sizeof(Set));//allocation for number of sets
   for (int i = s; i > 0; i--){
     Line *lines = malloc(E*sizeof(struct Line));
-    for (int j = E; j > 0; j--){
-      lines[j].blocks = malloc(b);
-    }
+    // for (int j = E; j > 0; j--){
+    //   lines[j].blocks = malloc(b);
+    // }
     sets[i].lines = lines;
   }
   (*c).sets = sets;   // does the same as below
@@ -110,6 +110,25 @@ void memory(int s, int E, int b, Cache *c){
 }
 
 // Free the malloc'd stuff
-void freeTheCache(Cache *c){
+void freeTheCache(int s, int E, int b, Cache *c){
+  for (int i = s; i > 0; i--){
+    // for (int j = E; j > 0; j--){
+    //   free((*c).sets[i].lines[j].blocks);
+    // }
+    free((*c).sets[i].lines);
+  }
+}
 
+// helper function for reading in the data
+void parse(char *a){
+  // printf("first print: %c\n", a[0]);
+  char instr[1], addr[100], ignore[10], trace[111];
+  strcpy(trace, a);
+  sscanf(trace, "%s %s,%s", instr, addr, ignore);
+
+  if(a[0] == ' ') {
+    printf("test print: %s, %s, %s\n", instr, addr, ignore);
+  } else {
+    printf("Instruction ignored\n");
+  }
 }

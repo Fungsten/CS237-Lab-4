@@ -15,7 +15,7 @@
 typedef struct Line { // Change from Lines to Line
   int valid; // isValid or notIsValid
   int tag; // specifies line
-  int offset;
+  int offset; // not needed?
   int *blocks; // which of the blocks does the desired data live in
   int dirty; // 0 if unmodded, 1 if modded
   int LRU; // This is the clock, least recently used
@@ -31,13 +31,16 @@ typedef struct Cache {
 
 void memory(int, int, int, Cache*);
 void freeTheCache(int, int, int, Cache*);
-void parse(char*);
+void parse(char*, int , int);
+unsigned int getTag(int, int, int);
+unsigned int getSet(int, int, int);
 
 int main(int argc, char **argv)
 {
     FILE *fp;
     char str[60];
     int c, s, E, b;
+    int setbit, blockbit;
     Cache thecache; // come up with better name later
 
     //printSummary(0, 0 ,0);
@@ -54,6 +57,7 @@ int main(int argc, char **argv)
         case 's':
           printf("%s\n", optarg); //optarg
           // Number of set index bits (S = 2^s is the number of sets)
+          setbit = atoi(optarg);
           s = pow(2, atoi(optarg));
           break;
         case 'E':
@@ -62,6 +66,7 @@ int main(int argc, char **argv)
           E = atoi(optarg);
           break;
         case 'b':
+          blockbit = atoi(optarg);
           printf("%s\n", optarg);
           // Number of block bits (B = 2^b is the block size)
           b = pow(2, atoi(optarg));
@@ -78,7 +83,7 @@ int main(int argc, char **argv)
           while (fgets(str, 60, fp) != NULL) {
             // puts(str);
             memory(s, E, b, &thecache);
-            parse(str);
+            parse(str, setbit, blockbit);
           }
 
           fclose(fp);
@@ -120,15 +125,36 @@ void freeTheCache(int s, int E, int b, Cache *c){
 }
 
 // helper function for reading in the data
-void parse(char *a){
+void parse(char *a, int b, int s){
   // printf("first print: %c\n", a[0]);
-  char instr[1], addr[100], ignore[10], trace[111];
+  int addr;
+  char instr[1], ignore[10], trace[111];
   strcpy(trace, a);
-  sscanf(trace, "%s %s,%s", instr, addr, ignore);
+  sscanf(trace, "%s %x,%s", instr, &addr, ignore);
 
   if(a[0] == ' ') {
-    printf("test print: %s, %s, %s\n", instr, addr, ignore);
+    printf("test print: %s, %x, %s\n", instr, addr, ignore);
+    getTag(addr, b, s);
+    getSet(addr, b, s);
   } else {
     printf("Instruction ignored\n");
   }
+}
+
+unsigned int getTag(int addr, int b, int s){
+  int tag, u_addr;
+  u_addr = (unsigned) addr;
+  printf("addr, u: %x, %x\n", addr, u_addr);
+  printf("b, s: %x, %x\n", b, s);
+  tag = ((u_addr >> b) >> s);
+  printf("tag: %x\n", tag);
+  return tag;
+}
+
+unsigned int getSet(int addr, int b, int s){
+  int set, u_addr;
+  u_addr = (unsigned) addr;
+  set = (u_addr >> b) & (1 << s);
+  printf("set: %d\n", set);
+  return set;
 }

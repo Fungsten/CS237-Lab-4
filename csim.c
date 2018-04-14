@@ -16,8 +16,8 @@ typedef struct Line { // Change from Lines to Line
   int valid; // isValid or notIsValid
   int tag; // specifies line
   int offset; // not needed?
-  int *blocks; // which of the blocks does the desired data live in
-  int dirty; // 0 if unmodded, 1 if modded
+  int *blocks; // which of the blocks does the desired data live in; not needed
+  int dirty; // 0 if unmodded, 1 if modded; not needed
   int LRU; // This is the clock, least recently used
 } Line;
 
@@ -103,8 +103,17 @@ return 0;
 void memory(int s, int E, int b, Cache *c){
   //memory allocation for sets, lines per set, and bit blocks for line
   Set *sets = malloc(s*sizeof(Set));//allocation for number of sets
+
+  if (sets == NULL) {
+    fprintf(stderr, "Error - unable to allocate memory for sets\n");
+  }
+  
   for (int i = s; i > 0; i--){
     Line *lines = malloc(E*sizeof(struct Line));
+
+    if (lines == NULL) {
+      fprintf(stderr, "Error - unable to allocate memory for lines\n");
+    }
     // for (int j = E; j > 0; j--){
     //   lines[j].blocks = malloc(b);
     // }
@@ -116,6 +125,7 @@ void memory(int s, int E, int b, Cache *c){
 
 // Free the malloc'd stuff
 void freeTheCache(int s, int E, int b, Cache *c){
+  printf("Reached the end; now freeing the cache\n");
   for (int i = s; i > 0; i--){
     // for (int j = E; j > 0; j--){
     //   free((*c).sets[i].lines[j].blocks);
@@ -128,7 +138,7 @@ void freeTheCache(int s, int E, int b, Cache *c){
 void parse(char *a, int b, int s){
   // printf("first print: %c\n", a[0]);
   int addr;
-  char instr[1], ignore[10], trace[111];
+  char instr[2], ignore[10], trace[20];
   strcpy(trace, a);
   sscanf(trace, "%s %x,%s", instr, &addr, ignore);
 

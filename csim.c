@@ -30,7 +30,7 @@ void memory(int, int, int, Cache*);
 void freeTheCache(int, int, int, Cache*);
 unsigned int getTag(int, int, int);
 unsigned int getSet(int, int, int);
-void cacheSim(Cache*, char*, int, int, int, int);
+void cacheSim(Cache*, char*, int, int, int, int, int*);
 // void printSummary(int, int, int, int, int);
 
 int main(int argc, char **argv)
@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     char str[60];
     int c, s, E, b, setbit, blockbit;
     int help = 0, verbose = 0;
-    int hits = 0, misses = 0, evicts = 0;
+    int hitRate[3] = {0, 0, 0};
     Cache thecache; // come up with better name later
 
     while ((c = getopt (argc, argv, "hvs:E:b:t:")) != -1)
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
           while (fgets(str, 60, fp) != NULL) {
             // puts(str);
             memory(s, E, b, &thecache);
-            cacheSim(&thecache, str, setbit, blockbit, help, verbose);
+            cacheSim(&thecache, str, setbit, blockbit, help, verbose, hitRate);
 	          thecache.sets[16].lines[1].valid = 1;
 	          printf("valid: %d\n", thecache.sets[1].lines[1].valid);
           }
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
           break;
       }
 
-printSummary(hits, misses, evicts);
+printSummary(hitRate[0], hitRate[1], hitRate[2]);
 freeTheCache(s, E, b, &thecache);
 return 0;
 }
@@ -132,9 +132,10 @@ void freeTheCache(int s, int E, int b, Cache *c){
 }
 
 // helper function for reading in the data
-void cacheSim(Cache *c, char *a, int b, int s, int help, int verbose){
+void cacheSim(Cache *c, char *a, int b, int s, int help, int verbose, int *hitRate){
   // printf("first print: %c\n", a[0]);
   int addr, tag, set;
+  // int hits = 0, misses = 0, evicts = 0;
   char instr[2], ignore[10], trace[20];
   strcpy(trace, a);
   sscanf(trace, "%s %x,%s", instr, &addr, ignore);
@@ -151,6 +152,7 @@ void cacheSim(Cache *c, char *a, int b, int s, int help, int verbose){
 
     if (a[1] == 'L') {
       printf("L\n");
+      hitRate[0]++;
     }
     if (a[1] == 'S') {
       printf("S\n");

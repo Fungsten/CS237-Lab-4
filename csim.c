@@ -30,23 +30,29 @@ void memory(int, int, int, Cache*);
 void freeTheCache(int, int, int, Cache*);
 unsigned int getTag(int, int, int);
 unsigned int getSet(int, int, int);
-void cacheSim(Cache*, char*, int, int);
+void cacheSim(Cache*, char*, int, int, int, int);
+// void printSummary(int, int, int, int, int);
 
 int main(int argc, char **argv)
 {
     FILE *fp;
     char str[60];
     int c, s, E, b, setbit, blockbit;
+    int help = 0, verbose = 0;
+    int hits = 0, misses = 0, evicts = 0;
     Cache thecache; // come up with better name later
 
     while ((c = getopt (argc, argv, "hvs:E:b:t:")) != -1)
       switch (c) {
         case 'h':
           // Optional help flag that prints usage info
+          help = 1;
           printf("Usage info\n");
           break;
         case 'v':
           // Optional verbose flag that displays trace info
+          printf("Verbose mode\n");
+          verbose = 1;
           break;
         case 's':
           printf("%s\n", optarg); //optarg
@@ -68,7 +74,7 @@ int main(int argc, char **argv)
         case 't':
           // Name of the valgrind trace to replay
           printf("Trying to open file.\n");
-          printf("%s\n", optarg); 
+          printf("%s\n", optarg);
           fp = fopen(optarg, "r");
           if (fp == NULL) {
             perror("Error opening file");
@@ -77,9 +83,9 @@ int main(int argc, char **argv)
           while (fgets(str, 60, fp) != NULL) {
             // puts(str);
             memory(s, E, b, &thecache);
-            cacheSim(&thecache, str, setbit, blockbit);
-	    thecache.sets[16].lines[1].valid = 1;
-	    printf("valid: %d\n", thecache.sets[1].lines[1].valid);
+            cacheSim(&thecache, str, setbit, blockbit, help, verbose);
+	          thecache.sets[16].lines[1].valid = 1;
+	          printf("valid: %d\n", thecache.sets[1].lines[1].valid);
           }
 
           fclose(fp);
@@ -91,28 +97,25 @@ int main(int argc, char **argv)
           break;
       }
 
-
+printSummary(hits, misses, evicts);
 freeTheCache(s, E, b, &thecache);
 return 0;
 }
 
 void memory(int s, int E, int b, Cache *c){
   //memory allocation for sets, lines per set, and bit blocks for line
-  Set *sets = malloc(s*sizeof(Set));//allocation for number of sets
+  Set *sets = malloc(s*sizeof(Set)); //allocation for number of sets
 
   if (sets == NULL) {
     fprintf(stderr, "Error - unable to allocate memory for sets\n");
   }
-  
+
   for (int i = s; i > 0; i--){
     Line *lines = malloc(E*sizeof(struct Line));
 
     if (lines == NULL) {
       fprintf(stderr, "Error - unable to allocate memory for lines\n");
     }
-    // for (int j = E; j > 0; j--){
-    //   lines[j].blocks = malloc(b);
-    // }
     sets[i].lines = lines;
   }
   (*c).sets = sets;   // does the same as below
@@ -123,15 +126,13 @@ void memory(int s, int E, int b, Cache *c){
 void freeTheCache(int s, int E, int b, Cache *c){
   printf("Reached the end; now freeing the cache\n");
   for (int i = s; i > 0; i--){
-    // for (int j = E; j > 0; j--){
-    //   free((*c).sets[i].lines[j].blocks);
-    // }
     free((*c).sets[i].lines);
   }
+  free((*c).sets);
 }
 
 // helper function for reading in the data
-void cacheSim(Cache *c, char *a, int b, int s){
+void cacheSim(Cache *c, char *a, int b, int s, int help, int verbose){
   // printf("first print: %c\n", a[0]);
   int addr, tag, set;
   char instr[2], ignore[10], trace[20];
@@ -143,45 +144,39 @@ void cacheSim(Cache *c, char *a, int b, int s){
     tag = getTag(addr, b, s);
     set = getSet(addr, b, s);
 
-    char i = instr;
-    
-    switch(i){
-    case 'L':
+    printf("tag: %x\n", tag);
+    printf("set: %d\n", set);
+
+    printf("%s\n", (instr)); // why does this work but char i = (instr) not?!?!
+
+    if (a[1] == 'L') {
       printf("L\n");
-      break;
-    case 'S':
+    }
+    if (a[1] == 'S') {
       printf("S\n");
-      break;
-    case 'M':
+    }
+    if (a[1] == 'M') {
       printf("M\n");
-      break;
     }
 
-
-    
   } else {
     printf("Instruction ignored\n");
   }
 
-  
 }
 
 unsigned int getTag(int addr, int b, int s){
   int tag, u_addr;
   u_addr = (unsigned) addr;
   // printf("addr, u: %x, %x\n", addr, u_addr);
-  // printf("b, s: %x, %x\n", b, s); 
+  // printf("b, s: %x, %x\n", b, s);
   tag = ((u_addr >> b) >> s);
-  printf("tag: %x\n", tag);
   return tag;
 }
 
 unsigned int getSet(int addr, int b, int s){
   int set, u_addr;
   u_addr = (unsigned) addr;
-  set = (u_addr >> b) & ~(~0 <<  s); 
-  printf("set: %d\n", set);
+  set = (u_addr >> b) & ~(~0 <<  s);
   return set;
 }
-
-

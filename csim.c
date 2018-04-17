@@ -14,7 +14,7 @@
 
 typedef struct Line { // Change from Lines to Line
   int valid; // isValid or notIsValid
-  int tag; // specifies line
+  long tag; // specifies line
   int LRU; // This is the clock, least recently used
 } Line;
 
@@ -28,10 +28,10 @@ typedef struct Cache {
 
 void memory(int, int, int, Cache*);
 void freeTheCache(int, int, int, Cache*);
-unsigned int getTag(int, int, int);
-unsigned int getSet(int, int, int);
+unsigned long getTag(long, int, int);
+unsigned long getSet(long, int, int);
 void cacheSim(Cache*, char*, int, int, int, int*, int, int);
-// void printSummary(int, int, int, int, int);
+void printCache(int, int, Cache*);
 
 int main(int argc, char **argv)
 {
@@ -80,12 +80,14 @@ int main(int argc, char **argv)
             perror("Error opening file");
             return -1;
           }
+	         memory(s,E,b, &thecache);
           while (fgets(str, 60, fp) != NULL) {
             // puts(str);
-            memory(s, E, b, &thecache);
+
             cacheSim(&thecache, str, setbit, blockbit, verbose, hitRate, counter, E);
 	          // thecache.sets[16].lines[1].valid = 1;
 	          // printf("valid: %d\n", thecache.sets[1].lines[1].valid);
+            // printCache(E, s, &thecache);
             counter++;
           }
 
@@ -111,7 +113,7 @@ void memory(int s, int E, int b, Cache *c){
     fprintf(stderr, "Error - unable to allocate memory for sets\n");
   }
 
-  for (int i = s; i > 0; i--){
+  for (int i = 0; i < s; i++){
     Line *lines = malloc(E*sizeof(struct Line));
 
     if (lines == NULL) {
@@ -126,30 +128,31 @@ void memory(int s, int E, int b, Cache *c){
 // Free the malloc'd stuff
 void freeTheCache(int s, int E, int b, Cache *c){
   printf("Reached the end; now freeing the cache\n");
-  for (int i = s; i > 0; i--){
+  for (int i = 0; i < s; i++){
     free((*c).sets[i].lines);
   }
   free((*c).sets);
 }
 
 // helper function for reading in the data
-void cacheSim(Cache *c, char *a, int b, int s, int verbose, int *hitRate, int counter, int E){
+void cacheSim(Cache *c, char *a, int s, int b, int verbose, int *hitRate, int counter, int E){
   // printf("first print: %c\n", a[0]);
-  int addr, tag, set;
+  long addr, tag, set;
+  int hit = 0, evict = 0;
   // int hits = 0, misses = 0, evicts = 0;
   char instr[2], ignore[10], trace[20];
   strcpy(trace, a);
-  sscanf(trace, "%s %x,%s", instr, &addr, ignore);
+  sscanf(trace, "%s %lx,%s", instr, &addr, ignore);
 
   if (a[0] == ' ') {
     if (verbose == 1) {
-      printf("test print: %s %x, %s\n", instr, addr, ignore);
+      printf("test print: %s %lx, %s\n", instr, addr, ignore);
     }
     tag = getTag(addr, b, s);
     set = getSet(addr, b, s);
 
-    printf("tag: %x\n", tag);
-    printf("set: %d\n", set);
+    printf("tag: %lx\n", tag);
+    printf("set: %ld\n", set);
 
     // thecache.sets[16].lines[1].valid = 1;
     // printf("valid: %d\n", thecache.sets[1].lines[1].valid);
@@ -157,59 +160,174 @@ void cacheSim(Cache *c, char *a, int b, int s, int verbose, int *hitRate, int co
     printf("%s\n", (instr)); // why does this work but char i = (instr) not?!?!
 
     if (a[1] == 'L') {
-      printf("L\n");
+      printf("seg fault 1\n");
 
       for (int i = 0; i < E; i++) {
+        printf("seg fault 2\n");
+        printf("valid, tag: %d, %ld\n", (*c).sets[set].lines[i].valid, (*c).sets[set].lines[i].tag);
         if ((*c).sets[set].lines[i].valid == 1 && (*c).sets[set].lines[i].tag == tag) {
+          printf("It's a hit!\n");
           hitRate[0]++; // hit
           (*c).sets[set].lines[i].LRU = counter;
+          hit = 1; // to know not to run miss condition
+          evict = 1; // to know not to run evict condition
           break;
         }
-        if ((*c).sets[set].lines[i].valid == 1 && (*c).sets[set].lines[i].tag != tag){
-          Line *eviction = &(*c).sets[set].lines[0];
-          for(int j = 1; j <E; j++){
-            if ((*eviction).LRU > (*c).sets[set].lines[j].LRU){
-              (*eviction) = (*c).sets[set].lines[j];
-              (*eviction).tag = tag;
-              hitRate[1]++; // miss
-              hitRate[2]++; // evict
-              break;
-            }
+      }
+
+      if (hit == 0) {
+        hitRate[1]++;
+        for (int i = 0; i < E; i++) {
+          if ((*c).sets[set].lines[i].valid == 0) {
+            (*c).sets[set].lines[i].tag = tag;
+            (*c).sets[set].lines[i].LRU = counter;
+            (*c).sets[set].lines[i].valid = 1;
+            evict = 1; // to know not to run evict condition
+            break;
           }
-        } else {
-          (*c).sets[set].lines[i].tag = tag;
-          hitRate[1]++; // miss
         }
+      }
+
+      if (evict == 0) {
+        printf("Have to evict!\n");
+        hitRate[2]++;
+        Line *eviction = &(*c).sets[set].lines[0];
+        for(int j = 1; j < E; j++){
+          if ((*eviction).LRU > (*c).sets[set].lines[j].LRU){
+            eviction = &((*c).sets[set].lines[j]);
+          }
+        }
+        (*eviction).tag = tag;
+        (*eviction).LRU = counter;
       }
     }
     if (a[1] == 'S') {
-      printf("S\n");
+      // printf("S\n");
+
       for (int i = 0; i < E; i++) {
+        printf("valid, tag: %d, %ld\n", (*c).sets[set].lines[i].valid, (*c).sets[set].lines[i].tag);
         if ((*c).sets[set].lines[i].valid == 1 && (*c).sets[set].lines[i].tag == tag) {
+          printf("It's a hit!\n");
           hitRate[0]++; // hit
           (*c).sets[set].lines[i].LRU = counter;
+          hit = 1; // to know not to run miss condition
+          evict = 1; // to know not to run evict condition
           break;
         }
-        if ((*c).sets[set].lines[i].valid == 1 && (*c).sets[set].lines[i].tag != tag){
-          Line *eviction = &(*c).sets[set].lines[0];
-          for(int j = 1; j <E; j++){
-            if ((*eviction).LRU > (*c).sets[set].lines[j].LRU){
-              (*eviction) = (*c).sets[set].lines[j];
-              (*eviction).tag = tag;
-              hitRate[1]++; // miss
-              hitRate[2]++; // evict
-              break;
-            }
+      }
+
+      if (hit == 0) {
+        printf("It's a miss!\n");
+        hitRate[1]++;
+        for (int i = 0; i < E; i++) {
+          if ((*c).sets[set].lines[i].valid == 0) {
+            printf("Found an empty line!\n");
+            (*c).sets[set].lines[i].tag = tag;
+            (*c).sets[set].lines[i].LRU = counter;
+            (*c).sets[set].lines[i].valid = 1;
+            evict = 1; // to know not to run evict condition
+            break;
           }
-        } else {
-          (*c).sets[set].lines[i].tag = tag;
-          hitRate[1]++; // miss
         }
       }
+
+      if (evict == 0) {
+        printf("Have to evict!\n");
+        hitRate[2]++;
+        Line *eviction = &(*c).sets[set].lines[0];
+        for(int j = 1; j < E; j++){
+          if ((*eviction).LRU > (*c).sets[set].lines[j].LRU){
+            eviction = &((*c).sets[set].lines[j]);
+          }
+        }
+        (*eviction).tag = tag;
+        (*eviction).LRU = counter;
+      }
+
     }
     if (a[1] == 'M') {
-      printf("M\n");
+      // printf("M\n");
+      // do L
+      for (int i = 0; i < E; i++) {
+        printf("valid, tag: %d, %ld\n", (*c).sets[set].lines[i].valid, (*c).sets[set].lines[i].tag);
+        if ((*c).sets[set].lines[i].valid == 1 && (*c).sets[set].lines[i].tag == tag) {
+          printf("It's a hit!\n");
+          hitRate[0]++; // hit
+          (*c).sets[set].lines[i].LRU = counter;
+          hit = 1; // to know not to run miss condition
+          evict = 1; // to know not to run evict condition
+          break;
+        }
+      }
 
+      if (hit == 0) {
+        printf("It's a miss!\n");
+        hitRate[1]++;
+        for (int i = 0; i < E; i++) {
+          if ((*c).sets[set].lines[i].valid == 0) {
+            printf("Found an empty line!\n");
+            (*c).sets[set].lines[i].tag = tag;
+            (*c).sets[set].lines[i].LRU = counter;
+            (*c).sets[set].lines[i].valid = 1;
+            evict = 1; // to know not to run evict condition
+            break;
+          }
+        }
+      }
+
+      if (evict == 0) {
+        printf("Have to evict!\n");
+        hitRate[2]++;
+        Line *eviction = &(*c).sets[set].lines[0];
+        for(int j = 1; j < E; j++){
+          if ((*eviction).LRU > (*c).sets[set].lines[j].LRU){
+            eviction = &((*c).sets[set].lines[j]);
+          }
+        }
+        (*eviction).tag = tag;
+        (*eviction).LRU = counter;
+      }
+      counter++;
+      // do S
+      for (int i = 0; i < E; i++) {
+        printf("valid, tag: %d, %ld\n", (*c).sets[set].lines[i].valid, (*c).sets[set].lines[i].tag);
+        if ((*c).sets[set].lines[i].valid == 1 && (*c).sets[set].lines[i].tag == tag) {
+          printf("It's a hit!\n");
+          hitRate[0]++; // hit
+          (*c).sets[set].lines[i].LRU = counter;
+          hit = 1; // to know not to run miss condition
+          evict = 1; // to know not to run evict condition
+          break;
+        }
+      }
+
+      if (hit == 0) {
+        printf("It's a miss!\n");
+        hitRate[1]++;
+        for (int i = 0; i < E; i++) {
+          if ((*c).sets[set].lines[i].valid == 0) {
+            printf("Found an empty line!\n");
+            (*c).sets[set].lines[i].tag = tag;
+            (*c).sets[set].lines[i].LRU = counter;
+            (*c).sets[set].lines[i].valid = 1;
+            evict = 1; // to know not to run evict condition
+            break;
+          }
+        }
+      }
+
+      if (evict == 0) {
+        printf("Have to evict!\n");
+        hitRate[2]++;
+        Line *eviction = &(*c).sets[set].lines[0];
+        for(int j = 1; j < E; j++){
+          if ((*eviction).LRU > (*c).sets[set].lines[j].LRU){
+            eviction = &((*c).sets[set].lines[j]);
+          }
+        }
+        (*eviction).tag = tag;
+        (*eviction).LRU = counter;
+      }
     }
 
   } else {
@@ -218,18 +336,82 @@ void cacheSim(Cache *c, char *a, int b, int s, int verbose, int *hitRate, int co
 
 }
 
-unsigned int getTag(int addr, int b, int s){
-  int tag, u_addr;
+unsigned long getTag(long addr, int b, int s){
+  long tag, u_addr;
   u_addr = (unsigned) addr;
-  // printf("addr, u: %x, %x\n", addr, u_addr);
-  // printf("b, s: %x, %x\n", b, s);
+  // printf("addr, u: %lx, %lx\n", addr, u_addr);
+  // printf("b, s: %lx, %lx\n", b, s);
   tag = ((u_addr >> b) >> s);
   return tag;
 }
 
-unsigned int getSet(int addr, int b, int s){
-  int set, u_addr;
+unsigned long getSet(long addr, int b, int s){
+  long set, u_addr;
   u_addr = (unsigned) addr;
-  set = (u_addr >> b) & ~(~0 <<  s);
+  printf("Set params; addr: %ld, b: %d, s: %d", addr, b, s);
+  set = (u_addr >> b) & ~(~0L << s);
   return set;
 }
+
+void printCache(int E, int s, Cache *c){
+  //debugging purposes printing function
+  //write a for loop for each set
+  for (int i = 0; i < s; i++){
+    printf("Printing cache set: %d\n", i);
+    for (int j = 0; j < E; j++){
+      //calls the lines
+      printf("tag: %lx\n",(*c).sets[i].lines[j].tag);
+      printf("LRU: %d\n",(*c).sets[i].lines[j].LRU);
+      printf("valid: %d\n",(*c).sets[i].lines[j].valid);
+    }
+  }
+}
+
+// if (hit == 0){
+//   for (int i = 0; i < E; i++) {
+//     if ((*c).sets[set].lines[i].valid == 1 && (*c).sets[set].lines[i].tag != tag){
+//       printf("Hello world!!\n");
+//       Line *eviction = &(*c).sets[set].lines[0];
+//       for(int j = 1; j <E; j++){
+//         if ((*eviction).LRU > (*c).sets[set].lines[j].LRU){
+//           (*eviction) = (*c).sets[set].lines[j];
+//           (*eviction).tag = tag;
+//           (*c).sets[set].lines[i].LRU = counter;
+//           hitRate[1]++; // miss
+//           hitRate[2]++; // evict
+//           break;
+//         }
+//       }
+//     } else {
+//       printf("Your trolling\n");
+//       (*c).sets[set].lines[i].tag = tag;
+//       (*c).sets[set].lines[i].valid = 1;
+//       (*c).sets[set].lines[i].LRU = counter;
+//       hitRate[1]++; // miss
+//     }
+//   }
+// }
+
+
+// for (int i = 0; i < E; i++) {
+//   if ((*c).sets[set].lines[i].valid == 1 && (*c).sets[set].lines[i].tag == tag) {
+//     hitRate[0]++; // hit
+//     (*c).sets[set].lines[i].LRU = counter;
+//     break;
+//   }
+//   if ((*c).sets[set].lines[i].valid == 1 && (*c).sets[set].lines[i].tag != tag){
+//     Line *eviction = &(*c).sets[set].lines[0];
+//     for(int j = 1; j <E; j++){
+//       if ((*eviction).LRU > (*c).sets[set].lines[j].LRU){
+//         (*eviction) = (*c).sets[set].lines[j];
+//         (*eviction).tag = tag;
+//         hitRate[1]++; // miss
+//         hitRate[2]++; // evict
+//         break;
+//       }
+//     }
+//   } else {
+//     (*c).sets[set].lines[i].tag = tag;
+//     hitRate[1]++; // miss
+//   }
+// }

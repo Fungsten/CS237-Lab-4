@@ -138,10 +138,10 @@ void cacheSim(Cache *c, char *a, int s, int b, int verbose, int *hitRate, int co
     tag = getTag(addr, b, s);
     set = getSet(addr, b, s);
 
-    printf("tag: %lx\n", tag);
-    printf("set: %ld\n", set);
-
-    printf("%s\n", (instr)); // why does this work but char i = (instr) not?!?!
+    // printf("tag: %lx\n", tag);
+    // printf("set: %ld\n", set);
+    //
+    // printf("%s\n", (instr)); // why does this work but char i = (instr) not?!?!
 
     if (a[1] == 'L') {
       runCheck(c, E, hitRate, counter, tag, set);
@@ -164,26 +164,25 @@ void cacheSim(Cache *c, char *a, int s, int b, int verbose, int *hitRate, int co
 
 unsigned long getTag(long addr, int b, int s){
   long tag, u_addr;
-  u_addr = (unsigned) addr;
+  u_addr = (unsigned) addr; // we chose to use unsigned jic for any silly bit shifting shenanigans
   tag = ((u_addr >> b) >> s);
   return tag;
 }
 
 unsigned long getSet(long addr, int b, int s){
   long set, u_addr;
-  u_addr = (unsigned) addr;
-  // printf("Set params; addr: %ld, b: %d, s: %d", addr, b, s);
+  u_addr = (unsigned) addr; // see above
   set = (u_addr >> b) & ~(~0L << s);
   return set;
 }
 
 void runCheck(Cache *c, int E, int *hitRate, int counter, long tag, long set){
-  int hit = 0, evict = 0;
+  int hit = 0, evict = 0; // flags to indicate whether certain parts need execution or not
 
   for (int i = 0; i < E; i++) {
-    printf("valid, tag: %d, %ld\n", (*c).sets[set].lines[i].valid, (*c).sets[set].lines[i].tag);
+    // printf("valid, tag: %d, %ld\n", (*c).sets[set].lines[i].valid, (*c).sets[set].lines[i].tag);
     if ((*c).sets[set].lines[i].valid == 1 && (*c).sets[set].lines[i].tag == tag) {
-      printf("It's a hit!\n");
+      // printf("It's a hit!\n");
       hitRate[0]++; // hit
       (*c).sets[set].lines[i].LRU = counter;
       hit = 1; // to know not to run miss condition
@@ -206,7 +205,7 @@ void runCheck(Cache *c, int E, int *hitRate, int counter, long tag, long set){
   }
 
   if (evict == 0) {
-    printf("Have to evict!\n");
+    // printf("Have to evict!\n");
     hitRate[2]++;
     Line *eviction = &(*c).sets[set].lines[0];
     for(int j = 1; j < E; j++){
@@ -226,6 +225,7 @@ void printCache(int E, int s, Cache *c){
     printf("Printing cache set: %d\n", i);
     for (int j = 0; j < E; j++){
       // calls each line per set
+      printf("Printing cache line: %d\n", j);
       printf("tag: %lx\n",(*c).sets[i].lines[j].tag);
       printf("LRU: %d\n",(*c).sets[i].lines[j].LRU);
       printf("valid: %d\n",(*c).sets[i].lines[j].valid);
